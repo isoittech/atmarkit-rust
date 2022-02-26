@@ -1,100 +1,80 @@
-:toc:
-
-# VSCodeにおけるRustアプリのテンプレートプロジェクト
-
-## ■ 背景・目的
+# ■ 背景・目的
 - Rustのお勉強のため
-- Windowsアプリをさくっと作りたいため
+- atmarkIT の RUST お勉強講座
+  - URL: https://atmarkit.itmedia.co.jp/ait/series/24844/
 
-## ■ 成果物
-- 本プロジェクトをCloneして、VSCodeでﾁｮﾁｮｯと設定を編集したら、Windowsアプリが出来る、ようなそんな雛形的Rustプロジェクト。
+# ■ 講座の内容
+## ▼ 第一回
+- MicrosoftとGoogleが採用
+- 高い安全性を保ちながら、並列性を担保し、細かなリソース操作も可能にしたプログラミング言語
+  - メモリ安全性（メモリ利用における安全性が言語によって保証されていること）を実現
+  - ネイティブコンパイラ言語ならではのコンパクトさと高速性を持つ
+  - メモリなどのリソースの細やかな取り回しが可能
+  - C/C++の弱点といわれる低い並列性、ポインタに代表される危険性を克服
 
-## ■ 辿った軌跡
+- 現在のネイティブコンパイラ言語
+  - 動的にポインタの有効性などをチェックするのは性能とのトレードオフの関係にあり、一般的には行われていない
+  - JavaやC#といった中間言語型の言語では動的なチェックを行っていますが、性能的には不利
 
-### ▼ Microsoft C++ build tools のインストール
-[%hardbreaks]
-https://visualstudio.microsoft.com/visual-cpp-build-tools/
-から「ダウンロード」リンクをクリックして遷移したページで、自動的にDLが開始される。
-それを実行して、ウィザードに従い、インストールする。
+- Rustの制約
+  - 「ボローチェッカー」
+    - メモリなどのリソースの所有者とリソースの生存期間（ライフタイム）の静的解析をする仕組み
+  - リソースと所有者を1対1にする
+    - ある変数がオブジェクトを所有するとして、そのオブジェクトは他の変数では所有できないようにする
+    - 変数の消滅とオブジェクトの破棄というライフタイムを管理できる
 
+- 制約に伴う効果
+  - ライフタイムを管理できるのでオブジェクトの破棄タイミングをコンパイラが把握でき、不要になったタイミングですぐに破棄できる
+    - GC（ガベージコレクタ）が不要ということ
 
-### ▼ Rustコンパイル のインストール
+- コンパクトで高速なコンパイラ型言語
+  - Rustのコンパイラは、Clangと同様にLLVMと呼ばれる仮想コンパイラプラットフォームに基づいたコンパイル機構に準拠
+  - LLVMの中間コードにいったん変換されたあと、最終的にターゲットとなるCPUで動作可能なバイナリを生成
 
-. 下記にアクセス +
-https://rustup.rs/
+- マルチスレッドプログラミングへの対応
+  - C/C++
+    - スレッドセーフでないことがたびたび問題視される
+      - Cの一部の標準ライブラリ関数ではstatic（静的）な変数を使っているため、複数のスレッドから関数を呼び出すことで競合が発生する可能性がある
+      - 変数をロックして競合の問題を回避したとしても、今度はロック解除待ちが相互に発生するデッドロックの問題もある
+      - 現在はpthreadsといったPOSIX準拠のマルチスレッド対応ライブラリの登場で状況は変わっているが、外部ライブラリに頼らざるを得ない状況は変わっていない
+  - Rust
+    - 標準ライブラリにマルチスレッドの機能が用意されているので、スレッドセーフが保証されている
 
-. rustup‑init.exe ファイルをDLクリックして実行、インストールを開始する +
-下記選択肢は1（Default）を選択する。
-+
-....
-1) Proceed with installation (default)
-2) Customize installation
-3) Cancel installation
-....
+- 自動テスト機能
+- モジュールシステムとパッケージマネジャーCargo
+- Rustのドキュメント（マニュアル）
+  - 日本語のドキュメントを読むことができる
 
-. PATHに `%USERPROFILE%\.cargo\bin` を指定する。
+- Rustのプログラム
+  - 主要なプログラム
+    - rustup：Rustのツールチェーンを管理
+      - Rustをインストール、アップデートしたりアンインストールしたりする
+    - rustc：Rustコンパイラ
+      - 中間言語、実行バイナリ、静的ライブラリ、動的ライブラリをソースコードから生成する
+    - cargo：パッケージマネジャー（ビルドツール）
+      - Rustのビルドツール
+      - プロジェクトのビルド、テスト、外部ライブラリのダウンロード、ドキュメントの作成
 
+- プロジェクト
+  - Rustでは、アプリケーションを「プロジェクト」という単位で管理
 
-### ▼ VSCode拡張機能のインストール
+- パッケージ
+  - プロジェクトにおける機能の単位
 
-. 拡張機能「Rust」 +
-普通に入れる。
-
-. 拡張機能「Rustfmt」 +
-普通に入れる。
-
-### ▼ お試しプログラム（コンソール出力ONLY）
-
-```Rust
-# src/main.rs
-
-fn main() {
-   println!("Hello World!");
-}
+- パッケージの作成
+```shell
+% pwd
+/Users/nao/Documents/atmarkit_rust
+% cargo new --bin hello_world
+    Created binary (application) `hello_world` package
+%
 ```
 
-```toml
-# Cargo.toml
-[package]
-name # "hello_world"
-version # "0.0.1"
-```
-
-書いたら `Shift + Ctrl + B` で実行し、 `Rust: Cargo build` を選択。
-
-### ▼ お試しプログラムの自動生成
-
-`cargo new HelloWorld` というコマンドで下記資材を作成してくれるらしい。
-
-- HelloWorldフォルダ
-- .git/
-- .gitignore
-- Rustプログラム
-+
-```rust
-fn main() {
-    println!("Hello, world!");
-}
-```
-- 設定ファイル
-+
-```toml
-[package]
-name # "HelloWorld"
-version # "0.1.0"
-authors # ["*******"]
-edition # "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-
-```
-
-
-
-
-## ■ 参考
-
-* https://note.com/marupeke296/n/n5e4e4502ae21[WindowsのVS Codeに最低限のRust開発環境を構築して「Hello World」！]
-* https://qiita.com/osanshouo/items/7966ecbd41bc3ce611dd[[Rust\] web-viewでGUIアプリをつくる]
+- フォルダ構成
+  - src
+    - ソースファイルの置き場所
+  - target
+    - コンパイル結果の置き場所
+    - デフォルトではデバッグターゲットのためのdebugフォルダが作成される
+    - cargo runに--releaseオプションを与えるとリリースターゲットとなる
+      - releaseフォルダが作成されてそこに成果物が置かれる
