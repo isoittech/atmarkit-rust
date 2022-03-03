@@ -2,6 +2,7 @@
 - Rustのお勉強のため
 - atmarkIT の RUST お勉強講座
   - URL: https://atmarkit.itmedia.co.jp/ait/series/24844/
+  - Github: https://github.com/wateryinhare62/atmarkit_rust
 
 # ■ 講座の内容
 ## ▼ 第一回
@@ -399,3 +400,281 @@
     満点でない点数90が要素0にありました。    
     ```
   - continue式は値を返すためには使えない。
+
+## ▼ 第四回
+- 関数の定義
+  - 関数はネストできないので、main関数の外などグローバルに定義する必要がある。
+  - 関数定義の場所はコンパイラが見つけることができる限り、どこでもOK。
+    - main関数の後でもOK。
+    - Cでは、関数呼び出しより後に関数の定義がある場合には、あらかじめプロトタイプ宣言を
+      関数呼び出しの前に記述する必要があったが、Rustではこのような二重定義は不要。
+  - 引数も戻り値もない関数
+    ```rust
+    fn function_name() {
+        関数の処理…
+    }    
+    ```
+  - 関数名はスネークケースがRustの流儀。
+
+- 呼び出し
+  ```rust
+  fn main() {
+      println!("シンプルな関数を呼び出します。");
+      simple_function();                  // simple_function関数を呼び出す
+      println!("関数呼び出しが終了しました。");
+  }
+  // simple_functionの定義
+  fn simple_function() {
+      // simple_functionの処理内容
+      println!("simple_functionは何も受け取らないし何も返しません。");
+  }    
+  ```
+  ```
+  % cargo run --bin func1
+  シンプルな関数を呼び出します。
+  simple_functionは何も受け取らないし何も返しません。
+  関数呼び出しが終了しました。
+  ```
+- main関数
+  - バイナリが実行されるときに最初に呼び出される関数。
+  - 「エントリーポイント」と呼ばれる。
+  - main関数に引数はなく、戻り値もない。
+    - C/C++のようにmain関数の引数にコマンドライン引数が渡されることがない。
+    - コマンドライン引数の取得には専用のモジュールを使用する。
+
+- 引数のある関数の定義
+  - ```rust
+    fn function_name(arg: type[, ...]) {
+        関数の処理…
+    }    
+    ```
+  - 引数（parameter：仮引数）は関数名に続く小かっこの中に型修飾とともに列挙
+  - 引数の型修飾は、変数の宣言と異なり省略できない（型推論は利用できない）。
+
+  - i32型の引数が2個ある関数
+    ```rust
+    fn main() {
+        display_sum(10, 5);   // display_sum関数を実引数10と5で呼び出す
+    }
+    // display_sumの定義
+    fn display_sum(a: i32, b: i32) {        // 仮引数はi32型のaとb
+        println!("2つの引数の和は{}です。", a + b);   // display_sumの処理内容
+        // 「2つの引数の和は15です。」
+    }    
+    ```
+- 戻り値のある関数の定義
+  - ```rust
+    fn function_name(arg: type[, ...]) -> type {
+        関数の処理…
+        戻り値
+    }    
+    ```
+  - アロー演算子「->」を利用して戻り値の型を指定
+  - 戻り値の返し方
+    - return式で返す
+    - 最後に評価された式の値で返す
+    - ```rust
+      fn main() {
+        let a = 5;
+        let b = 10;
+        println!("{}の二乗は{}、{}の二乗は{}です。", a, square1(a), b, square2(b));
+        // 「5の二乗は25、10の二乗は100です。」
+      }
+      // square1関数の定義
+      fn square1(x: i32) -> i64 {     // 仮引数はi32型のx、戻り値はi64
+        return x as i64 * x as i64;   // return式で返す
+      }
+      // square2関数の定義
+      fn square2(x: i32) -> i64 {     // 仮引数はi32型のx、戻り値はi64
+        x as i64 * x as i64           // 式で返す
+      }    
+      ```
+  - 戻り値がない関数は、空のタプルである「（）」を返す関数
+    - `fn square1() -> () …` と書くのと同義
+    - 関数を呼び出した側でそれを受け取る必要はない。
+- 引数を書き換える関数の定義
+
+  - ```rust
+    // main()関数は省略
+    // xのy倍を繰り返しで求める関数
+    fn multiplier(x: i32, y: i32) -> i32 {
+        let mut r = 0;         // 戻り値の変数
+        while y > 0 {
+            r += x;
+            y -= 1;
+        }
+        r                      // 戻り値
+    }    
+    ```
+      - コンパイルすると下記エラーとなる。
+      - ```
+        % cargo run --bin func4
+           Compiling functions v0.1.0 (/Users/nao/Documents/atmarkit_rust/functions)
+        error[E0384]: cannot assign to immutable argument `y`
+          --> src/bin/func4.rs:10:9
+           |
+        6  | fn multiplier(x: i32, y: i32) -> i32 {
+           |                       - help: consider making this binding mutable: `mut y`
+        ...
+        10 |         y -= 1;
+           |         ^^^^^^ cannot assign to immutable argument        
+        ```
+      - 不変変数yへの代入はできないというエラー。
+      - 関数定義の引数においてmut修飾子が記述されていないので、この引数も不変変数になるため。
+      - 関数定義の引数にもmut修飾子を付けることで解決できる。
+
+        - ```rust
+          // main()関数は省略
+          fn multiplier(x: i32, mut y: i32) -> i32 {      // yにmutを付加
+              let mut r = 0;
+              while y > 0 {
+                  r += x;
+                  y -= 1;
+              }
+              r
+          }    
+          ```
+- 条件分岐から抜ける
+  - 条件分岐を持つ関数が戻り値を返す場合、どのような実行経路になっても
+    関数が値を返すようにreturn式か通常の式がなければならない。
+  - ```rust
+    fn main() {
+        let a = divider(5, 2);              // 関数呼び出し
+    }
+    fn divider(x: i32, y: i32) -> i32 {
+        if y != 0 {                         // yが0でない場合にx/yを返す
+            return x / y;
+        }
+    }
+    ```
+    - 上記は下記コンパイルエラーとなる。
+      ```
+      src/bin/func_if1.rsのソースコード
+      % cargo run --bin func_if1
+         Compiling functions v0.1.0 (/Users/nao/Documents/atmarkit_rust/functions)
+      error[E0317]: `if` may be missing an `else` clause
+       --> src/bin/func6.rs:6:5
+        |
+      5 |   fn divider(x: i32, y: i32) -> i32 {
+        |                                 --- expected `i32` because of this return type
+      6 | /     if y != 0 {
+      7 | |         return x / y;
+      8 | |     }
+        | |_____^ expected `i32`, found `()`
+        |
+        = note: `if` expressions without `else` evaluate to `()`
+        = help: consider adding an `else` block that evaluates to the expected type          
+      ```
+    - 下記にすればOK。
+      ```rust
+      fn main() {
+          let a = divider(5, 2);
+      }
+      fn divider(x: i32, y: i32) -> i32 {
+          if y != 0 {                         // yが0でない場合にx/yを返す
+              return x / y;
+          } else {                            // yが0なら戻り値も0にする
+              return 0;
+          }
+      }
+      ```
+    - ただし、警告が出る。main関数の中で変数aを関数の戻り値で初期化しているが、変数aがその後使われていないため。
+      ```
+      % cargo run --bin func_if2
+         Compiling functions v0.1.0 (/Users/nao/Documents/atmarkit_rust/functions)
+      warning: unused variable: `a`
+       --> src/bin/func7.rs:2:9
+        |
+      2 |     let a = divider(5, 2);
+        |         ^ help: if this is intentional, prefix it with an underscore: `_a`
+        |
+        = note: `#[warn(unused_variables)]` on by default
+      ```
+      - アドバイスにあるように、aを_aという具合にアンダースコア（_）を前に置けば、
+        それは故意（intentional）によるものと見なして警告は出なくなる。
+        - デバッグで一時的な変数を使いたい場合で、警告を出したくないときに利用するとよき。
+    
+  - このように、return式はif式の中で利用できますし、以下のように書くこともできます。
+    ```rust
+    fn divider(x: i32, y: i32) -> i32 {
+        if y != 0 {
+            x / y          // yが0でない場合にif式の値をx/yとする
+        } else {
+            0              // yが0である場合にif式の値を0にする
+        }
+    }                      // ここで関数を抜ける
+    ```
+    ```rust
+    fn divider(x: i32, y: i32) -> i32 {
+        if y != 0 {
+            return x / y;  // yが0でない場合にx/yを返す
+        }
+        0                  // 最終的に戻り値を0にする
+    }                      // ここで関数を抜ける
+    ```
+    ```rust
+    fn divider(x: i32, y: i32) -> i32 {
+        return if y != 0 {
+            x / y          // yが0でない場合にx/yを返す
+        } else {
+            0              // 最終的に戻り値は0にする
+        };                 // ここで関数を抜ける
+    }
+
+- 繰り返しから抜ける
+  - 繰り返しの構文において、繰り返しを止めたい場合にはbreak式を利用する他、
+    return式を置いてもその時点で繰り返しを中断し、関数から抜けることができる。
+    以下のソースコードはコンパイルエラーになる。
+    ```rust
+    // main()関数は省略
+    fn calc_sum(mut x: i32) -> i32 {
+        let mut r = 0;
+        while x > 0 {
+            r += x;
+            if r > 10_000 {
+                return r; 
+            }
+            x -= 1;
+        }
+    }
+    ```
+    ```
+    % cargo run --bin func_while1
+       Compiling functions v0.1.0 (/Users/nao/Documents/atmarkit_rust/functions)
+    error[E0308]: mismatched types
+      --> src/bin/func_while1.rs:8:5
+       |
+    5  |   fn calc_sum(mut x: i32) -> i32 {
+       |                              --- expected `i32` because of return type
+    ...
+    8  | /     while x > 0 {
+    9  | |         r += x;
+    10 | |         if r > 10 {
+    11 | |             return r; 
+    12 | |         }
+    13 | |         x -= 1;
+    14 | |     }
+       | |_____^ expected `i32`, found `()`
+    ```
+    - エラーの内容は、型の不一致。
+    - 関数calc_sum()はi32型の値を返すことになっているが、while式の値が空のタプルなので一致しないという意味。
+    - while式が値を持つために出るRust特有のエラーである。
+
+    - Cでは警告こそ出るものの、このような書き方をしてもバイナリを実行できてしまうため
+      「return文を経由しないときの関数の戻り値は不定になる」というバグの原因になっていた。
+    - このエラーを解決するには、if式の例と同様に、while式がreturn式により終了しなくても、
+      何らかのi32型の値を返すように修正する。
+      ```rust
+      // main()関数は省略
+      fn calc_sum(mut x: i32) -> i32 {
+          let mut r: i32 = 0;   // ★コレ★
+          while x > 0 {
+              r += x;
+              if r > 10_000 {
+                  return r; 
+              }
+              x -= 1;
+          }
+          r    // ★コレ★
+      }
+      ```
