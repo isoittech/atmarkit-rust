@@ -1553,3 +1553,300 @@ simple_functionは何も受け取らないし何も返しません。
   - draw()メソッドの中では、match式によるパターンマッチングを行い、列挙子の値に応じた表示を行っている。
   - 同じメソッドの呼び出しでもインスタンスに応じた動きにできることから、
     オブジェクト指向プログラミングにおける抽象メソッドのような振る舞いを実装できる。
+
+## ▼ 第八回
+### ● ファイルの内容を出力する
+- エラー処理は、ファイルの入出力において必要となることが多いもの。
+- まずはファイルの読み込みと内容を表示するコードを作成し、エラー処理について検討してみる。
+- ここでは、ファイル名をコマンドラインから取り出し、それを実際に読み込み、表示させてみる。
+
+### ● ファイルの読み込みと表示
+- 下記コードは、コマンドラインで指定されたテキストファイルを読み込み、内容をコンソールに出力する。
+  ```rust
+  use std::env;                                           (1)
+  use std::fs::File;
+  use std::io::prelude::*;
+  fn main() 
+  {
+      let args: Vec<String> = env::args().collect();      (2)
+      let filename = &args[1];
+      let mut file = File::open(filename).unwrap();       (3)
+      let mut contents = String::new();
+      file.read_to_string(&mut contents).unwrap();        (4)
+      println!("{}", contents);
+  }
+  ```
+  - （1）はuse文で、幾つかのモジュールを使うという宣言。
+    - Javaにおけるimport文などと同じ位置付け。
+  - std::envモジュールの利用を宣言したことで、（2）のようにコマンドライン引数を取得するargs()メソッドが利用できるようになる。
+  - std::fs::Fileは、（3）のFile::open()メソッドのために必要
+  - std::io::prelude::*は（4）のread_to_string()メソッドのために必要。
+    - なお「*」は、その名前空間にあるもの全てという意味。
+
+- 補足: 「::」と名前空間
+  - std::env::args()などの「::」は、モジュールの名前空間を区切るもの。
+  - モジュールとは名前空間によって階層化された外部ライブラリ。
+    - この場合はstd名前空間のenvモジュールにあるargs()メソッドである。
+  - （2）では、コマンドライン引数を、String型のベクタに変換している。
+  - ベクタとは数値によるインデックスでアクセスできるリストのようなもの。
+  - 次のargs[1]で2番目のコマンドライン引数（1番目はコマンド自身）を参照として取得し、ファイル名としている。
+  - （3）では、コマンドラインで指定されたファイル名でファイルをオープンしている。
+    - open()メソッドは、他のプログラミング言語と同様にファイルを開くもの。
+  - （4）では、read_to_string()メソッドがString型への変更可能な参照を受け取って、
+    ファイルの内容を全て読み込み、続くprintln!()でそれを全て出力している。
+  - ファイルを明示的にクローズする文がないが、プログラムの終了とともにクローズされますので問題はない。
+
+　なお、読み込むファイルとして、以下のようなwagahaiwa_nekodearu.txtというテキストファイルを用意しました。
+
+### ● ファイル読み込みの実行
+- テスト用ファイル（wagahaiwa_nekodearu.txt）
+  ```
+  吾輩は猫である
+  夏目漱石
+  　吾輩《わがはい》は猫である。名前はまだ無い。
+  …後略…
+  ```
+- 上記のsrc/bin/readfile.rsを実行すると、wagahaiwa_nekodearu.txtの中身が出力される。
+  ```
+  % cargo run --bin readfile wagahaiwa_nekodearu.txt
+  …中略…
+  吾輩は猫である
+  夏目漱石
+  　吾輩《わがはい》は猫である。名前はまだ無い。
+  …後略…
+  ```
+- 補足: 標準入出力を使う
+  - Rustでも標準入出力を使うことができる。
+  - 散々使ってきたprintln!()も標準出力への出力を行っている。
+  - 明示的に標準入出力を使いたい場合には、それぞれstd::io::stdin()メソッド、
+  - std::io::stdout()メソッドを使って、File型のオブジェクトを取得する。
+
+### ● 存在しないファイルを指定してみる
+- ```
+  % cargo run --bin readfile notexists.txt
+  …中略…
+  thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Os { code: 2, kind: NotFound, message: "No such file or directory" }', src/bin/readfile.rs:9:41
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  ```
+  - エラーメッセージを表示してプログラムが異常終了した。
+  - 「No such file or directory」と出力されているように、ファイルまたはディレクトリが見つからないという内容。
+  - ここで重要なのは、「called `Result::unwrap()` on an `Err` value」の部分。
+    - Result::unrwap()メソッドをErrという値で呼び出した、という意味。
+
+### ● Rustにはエラーが2種類
+- 回復不能なエラー処理
+  - 例外を、検査例外と非検査例外と分けるのに似ているがRustには例外という仕組みはない。
+  - 独特の方法でエラーを処理する。
+  - 回復不能なエラーとは、例えば配列のインデックスが範囲外であったなどのエラー。
+    - この場合、プログラムの実行を継続させることに意味はない。
+    - プログラムの論理的な誤りを正しくするしか対処の方法がないため。
+    - プログラムは異常終了させることとなる。
+  - panic!()マクロ
+    - この回復不能なエラー処理はどうするかというと、
+      プログラムを異常終了させたい時点でpanic!()マクロを呼び出す。
+    - main()関数に入ってすぐにpanic!()を呼び出す例を以下に示す。
+      ```rust
+      fn main() {
+          panic!("Panicしました！");
+          println!("Panicしていません。");
+      }
+      ```
+      - 上記を実行すると、以下のようにエラーを表示してプログラムが終了し、
+        「Panicしていません。」は表示されない。
+        ```
+        % cargo run --bin panic1 
+        …中略…
+        warning: unreachable statement
+         --> src/bin/panic1.rs:3:5
+          |
+        2 |     panic!("Panicしました！");
+          |     -------------------------- any code following this expression is unreachable
+        3 |     println!("Panicしていません。");
+          |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unreachable statement
+          |
+        …中略…
+        thread 'main' panicked at 'Panicしました！', src/bin/panic1.rs:2:5
+        note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+        ```
+      - 「panicked at」とあるように、Rustのプログラムが回復不能なエラーでパニックを起こした、という内容。
+      - なお、コンパイラによって、panic!()以降は実行できないことが検知されているので、
+        到達不能なコードであるという警告が出ている。
+      - このpanic!()は、標準ライブラリの内部でも使われている。
+        - 例えば配列のインデックスが範囲外であった場合でも、panic!()が呼び出される。
+      - このことから、上記の存在しないファイルを指定したときのエラーは、
+        unrwap()メソッドがpanic!()を呼び出したということが想像できる。
+
+- バックトレース
+  - 上記の実行結果を見ると、最後の行に「環境変数としてRUST_BACKTRACE=1を設定すると、
+    バックトレースが出力される」という説明がある。
+  - バックトレースとは関数の呼び出し履歴のことで、最終的にPanic!()が呼び出されるまでに通った箇所が明示される。
+  - 環境変数としてRUST_BACKTRACE=1を設定し、src/bin/panic1.rsを実行した結果を以下に示す。
+    ```
+    % RUST_BACKTRACE=1 cargo run --bin panic1
+    …既出なので略…
+    thread 'main' panicked at 'Panicしました！', src/bin/panic1.rs:2:5
+    stack backtrace:
+       0: std::panicking::begin_panic
+                 at /rustc/9bc8c42bb2f19e745a63f3445f1ac248fb015e53/library/std/src/panicking.rs:519:12             (1)
+       1: panic1::main
+                 at ./src/bin/panic1.rs:2:5         (2)
+       2: core::ops::function::FnOnce::call_once
+                 at /rustc/9bc8c42bb2f19e745a63f3445f1ac248fb015e53/library/core/src/ops/function.rs:227:5
+    note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+    ```
+    - （1）が最終的にPanicを発生させた箇所
+    - （2）がsrc/bin/panic1.rsのpanic!()呼び出し箇所
+    - 呼び出し箇所は、ソースファイル名、行番号、行内の位置で示される。
+    - この例は単純なコードなので特に有益な情報はない。
+    - 一般的には関数の呼び出し履歴を見ることで問題解決の糸口とすることができる。
+  - 環境変数としてRUST_BACKTRACE=fulを設定すると、もっと詳細な情報を出力させることができる。
+    ```
+    % RUST_BACKTRACE=full cargo run --bin panic1
+    …既出なので略…
+    stack backtrace:
+       0:        0x10a778ac4 - std::backtrace_rs::backtrace::libunwind::trace::h67b1783e93f517c7
+                                   at /rustc/
+    …中略…
+      14:        0x10a76396c - panic1::main::h6dc33c1081f7466f
+                                   at /Users/nao/Documents/atmarkit_rust/errors/src/bin/panic1.rs:2:5
+    …中略…
+      24:        0x10a763986 - _main
+    ```
+    - あまりに長いので途中は割愛。
+    - このときは、バックトレース開始時点からの情報
+    - ライブラリ内のソース位置やコードのアドレスなども出力される。通常はここまで詳細な情報は不要。
+
+- 回復可能なエラー処理
+  - 例えばファイルが見つからないなどのエラー。
+  - この場合、エラーとなれば正しいファイルを指定し直すなどの処置をした後に、プログラムの実行を継続できる。
+  - 回復可能なエラー処理は、Resultという型で行われる。
+
+### ● Result型
+- 上記の「存在しないファイルを指定した場合」の実行例にある、
+  「called `Result::unwrap()` on an `Err` value」のResult
+- Resultが「結果」という意味を持つように、多くのメソッドが返すResult型のオブジェクトが、
+  エラーの判定と回復に用いられる。
+- 冒頭のsrc/bin/readfile.rsを修正して、エラー処理を入れてみた例を以下に示す。
+  ```rust
+  …中略…
+  fn main() 
+  {
+      let args: Vec<String> = env::args().collect();
+      let filename = &args[1];
+      match File::open(filename) {        (1)
+          Ok(mut file) => {               (2)
+              let mut contents = String::new();
+              file.read_to_string(&mut contents).unwrap();
+              println!("{}", contents);
+          },
+          Err(error) => {                 (3)
+              println!("ファイル {} が見つかりませんのでやり直して下さい。", 
+                  filename);
+              println!("エラーは {} です。", error);
+          },
+      };
+  }
+  ```
+  - （1）は、open()メソッドの戻り値次第で処理を分けるmatch式。
+  - （2）は、戻り値がOkであった場合
+  - （3）はErrであった場合の処理が書かれている。
+  - ここで、戻り値であるResult型オブジェクトの中身を見ていく。
+    - Result型は列挙型（enum型）で、列挙子はOkとErrのみ。以下のように定義されている。
+      ```rust
+      enum Result<T, E> {
+          Ok(T),
+          Err(E),
+      }
+      ```
+  - Resultの後にある山かっこ（<>）はジェネリクス型引数です。
+  - ジェネリクス型については考え方はC++やJavaと一緒。
+  - 最初のTは、メソッドの実行にエラーがないときに返されるOkの型を指定する。
+  - 次のEは、メソッドの実行がエラーとなったときに返されるErrの型（エラー型）を指定する。
+  - open()メソッドが返すResult型
+    - `<std::io::File, std::io::Error>`になっている。
+    - これはつまり、エラーのないときにはstd::io::Fileを含む列挙子Okが返される。
+    - エラーのときにはstd::io::Errorを含む列挙子Errが返される。
+    - これを踏まえて、先の例ではopen()メソッドの戻り値をmatch式にかけることで、
+      処理を分けることができた。
+
+  - （2）のstd::io::Fileは主にファイルハンドルを保持する構造体
+  - （3）のstd::io::Errorはエラーの内容を保持する構造体。
+  - 後者には、code, detail, kindなどのフィールドがある。
+    - OSのエラーコードと種類、エラーメッセージなどを保持している。
+      - 後者をprintln!()の引数に渡すと、std::io::Errorの備えるDisplayトレイトにより自動的に文字列化される。
+      - この場合はエラーメッセージとOSのエラーコードに整形されて表示される。
+  - ここでは特に処理していないが、read_to_string()メソッドが返すResult型は`Result<usize, std::io::Error>`
+    - エラーのないときにはusize型の値（読み込んだバイト数）を含む列挙子Okが返される。
+
+- unwrap()メソッドの話
+  - Resultオブジェクトのこのメソッドは、値がOkならばそれが包含する値を返し、Errならばpanic!()を呼び出す。
+  - ファイルが存在するなど問題がない状況では、unwrap()メソッドによりFileオブジェクトなどを返す。
+    - それを使ってファイル入出力が処理できる。
+  - 逆に、ファイルが存在しないなどといった問題があれば、プログラムは異常終了する。
+    - これが、冒頭のsrc/bin/readfile.rsでファイルが存在しないときにプログラムが異常終了した理由。
+
+- ちなみに、unwrap()メソッドには、よく似たexpect()というメソッドがある。
+  - expect()メソッドは文字列型の引数を1個だけ持っていて、それをpanic!()にそのまま渡す。
+  - これは、異常終了時に出力されるエラーメッセージに含む文字列を指定したいときに使用できる。
+
+### ● エラー処理の委譲
+- 回復可能なエラーの処理を、呼び出した側に委譲できる。
+- Javaで、メソッド内部で発生する例外を自らが処理しないことを示すthrowsのようなイメージ。
+- 委譲させるには、エラーの発生する可能性のある処理を含む関数（メソッド）の戻り値を、Result型とする。
+- 以下は、ファイルからの読み込みを関数として独立させ、内部で発生するエラーの処理をmain()関数に委譲する例。
+  ```rust
+  use std::env;
+  use std::fs::File;
+  use std::io;                    (1)
+  use std::io::prelude::*;
+  fn main() 
+  {
+      let args: Vec<String> = env::args().collect();
+      let filename = &args[1];
+      match read_file(filename) {                 (2)
+          Ok(s) => println!("{}", s),
+          Err(e) => println!("エラーが起きています：{}", e),
+      };
+  }
+  // ファイル名を受け取ってReasult<文字列, エラー>を返す関数
+  fn read_file(filename: &String) -> Result<String, io::Error>    (3)
+  {
+      match File::open(filename) {        (4)
+          Ok(mut file) => {
+              let mut contents = String::new();
+              match file.read_to_string(&mut contents) {          (5)
+                  Ok(_) => Ok(contents),
+                  Err(e) => Err(e),
+              }
+          },
+          Err(e) => Err(e),
+      }
+  }
+  ```
+  - （1）では、read_file()関数の戻り値io::Errorに必要なモジュールの使用を宣言している。
+  - （2）は、read_file()関数をファイル名を引数として呼び出し、その戻り値で処理を振り分けている。
+  - （3）は、read_file()関数では引数にString型への参照を受け取り、戻り値でResult<String, io::Error>を返すことを定義している。
+  - （4）と（5）は、それぞれファイルのオープンと読み込みについての処理を記述している。
+    - 一般的に、例外によらないエラー処理は階層的になっていかざるを得ず、
+      階層の深さによってはエラー処理が煩雑になってしまうものだが、
+      match式を使うことでとてもシンプルに記述できたことが分かる。
+
+- ?演算子を使用したシンプルな委譲
+  - とはいえ、match式が多かったり入れ子になっていたりすると、エラー時の戻り値が決まっているのに
+    何度も記述する必要があり、冗長になってくる。
+  - そのようなときに、ショートカットである?演算子を使って、match式を使わずに結果を返す記法が使える。
+  - ?演算子は、メソッド呼び出しが成功してOkが返ってきたらそれをそのまま返す。
+  - 失敗してErrが返ってきたらエラーの型を呼び出し元の戻り値のエラーの型に変換して、呼び出し元を脱出する。
+  - 以下は、read_file()関数を?演算子を使って書き直した例。
+    ```rust
+    fn read_file(filename: &String) -> Result<String, io::Error>
+    {
+        let mut file = File::open(filename)?
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        Ok(contents)
+    }
+    ```
+    - match式は消えうせて、非常にスッキリした。
+    - 便利な記法だが、Result型を戻り値に持つ関数内でしか使えないことに注意。
+      - 例えば、main()関数内で使おうとすると、コンパイルエラーになる。
